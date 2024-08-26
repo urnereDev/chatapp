@@ -8,13 +8,16 @@ class UserTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: EdgeInsets.all(10),
+      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 25),
       decoration: BoxDecoration(color: Theme.of(context).colorScheme.secondary,
-      borderRadius: BorderRadius.circular(12)),
+      borderRadius: BorderRadius.circular(8)),
       child: GestureDetector(
         onTap: onTap,
         child: Row(
           children: [
-            Icon(Icons.person),
+            const Icon(Icons.person),
+            SizedBox(width: 30,),
             Text(text)
           ],
         ),
