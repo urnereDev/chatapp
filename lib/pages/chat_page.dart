@@ -1,23 +1,30 @@
+import 'package:chatapp/components/chat_bubble.dart';
 import 'package:chatapp/components/textfield.dart';
 import 'package:chatapp/services/auth/auth_service.dart';
 import 'package:chatapp/services/chat/chat_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-class ChatPage extends StatelessWidget {
+class ChatPage extends StatefulWidget {
   final String receiverEmail;
   final String receiverId;
 
   ChatPage({super.key, required this.receiverEmail, required this.receiverId});
 
+  @override
+  State<ChatPage> createState() => _ChatPageState();
+}
+
+class _ChatPageState extends State<ChatPage> {
   final TextEditingController messageController = TextEditingController();
 
   final ChatService chatService = ChatService();
+
   final AuthService authService = AuthService();
 
   void sendMessage() async {
     if (messageController.text.isNotEmpty) {
-      await chatService.sendMessage(receiverId, messageController.text);
+      await chatService.sendMessage(widget.receiverId, messageController.text);
       messageController.clear();
     }
   }
@@ -25,8 +32,12 @@ class ChatPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surfaceTint,
       appBar: AppBar(
-        title: Text(receiverEmail),
+        title: Text(widget.receiverEmail),
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.grey,
+        elevation: 0,
       ),
       body: Column(
         children: [Expanded(child: buildMessageList()), buildUserInput()],
@@ -37,7 +48,7 @@ class ChatPage extends StatelessWidget {
   Widget buildMessageList() {
     String senderId = authService.getCurrentUser()!.uid;
     return StreamBuilder(
-      stream: chatService.getMessages(receiverId, senderId),
+      stream: chatService.getMessages(widget.receiverId, senderId),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Text("Error");
@@ -60,21 +71,45 @@ class ChatPage extends StatelessWidget {
 
   Widget buildMessageItem(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return Text(data["message"]);
+
+    bool isCurrentUser = data["senderId"] == authService.getCurrentUser()!.uid;
+    var alignment =
+        isCurrentUser ? Alignment.centerRight : Alignment.centerLeft;
+    return Container(
+        alignment: alignment,
+        child: Column(
+          mainAxisAlignment:
+              isCurrentUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+          children: [
+            ChatBubble(message: data["message"], isCurrentUser: isCurrentUser)
+          ],
+        ));
   }
 
   Widget buildUserInput() {
-    return Row(
-      children: [
-        Expanded(
-          child: TextFields(
-            hintText: "Type a message",
-            controller: messageController,
-            obscureText: false,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 50),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextFields(
+              hintText: "Type a message",
+              controller: messageController,
+              obscureText: false,
+            ),
           ),
-        ),
-        IconButton(onPressed: sendMessage, icon: Icon(Icons.send)),
-      ],
+          Container(
+              margin: EdgeInsets.only(right: 25),
+              decoration:
+                  BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+              child: IconButton(
+                  onPressed: sendMessage,
+                  icon: Icon(
+                    Icons.send,
+                    color: Colors.white,
+                  ))),
+        ],
+      ),
     );
   }
 }
