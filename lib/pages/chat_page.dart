@@ -19,14 +19,50 @@ class _ChatPageState extends State<ChatPage> {
   final TextEditingController messageController = TextEditingController();
 
   final ChatService chatService = ChatService();
-
   final AuthService authService = AuthService();
+
+  FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _focusNode.addListener(
+      () {
+        if (_focusNode.hasFocus) {
+          Future.delayed(
+            const Duration(milliseconds: 500),
+            () => scrollDown(),
+          );
+        }
+      },
+    );
+    Future.delayed(
+      const Duration(milliseconds: 500),
+      () => scrollDown(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    messageController.dispose();
+    // TODO: implement dispose
+    super.dispose();
+  }
+
+  final ScrollController _scrollController = ScrollController();
+  void scrollDown() {
+    _scrollController.animateTo(_scrollController.position.maxScrollExtent,
+        duration: const Duration(seconds: 1), curve: Curves.fastOutSlowIn);
+  }
 
   void sendMessage() async {
     if (messageController.text.isNotEmpty) {
       await chatService.sendMessage(widget.receiverId, messageController.text);
       messageController.clear();
     }
+    scrollDown();
   }
 
   @override
@@ -59,6 +95,7 @@ class _ChatPageState extends State<ChatPage> {
           );
         }
         return ListView(
+          controller: _scrollController,
           children: snapshot.data!.docs
               .map(
                 (doc) => buildMessageItem(doc),
@@ -81,7 +118,12 @@ class _ChatPageState extends State<ChatPage> {
           mainAxisAlignment:
               isCurrentUser ? MainAxisAlignment.end : MainAxisAlignment.start,
           children: [
-            ChatBubble(message: data["message"], isCurrentUser: isCurrentUser)
+            ChatBubble(
+              message: data["message"],
+              isCurrentUser: isCurrentUser,
+              messageId: doc.id,
+              userId: data["senderId"],
+            )
           ],
         ));
   }
@@ -93,18 +135,19 @@ class _ChatPageState extends State<ChatPage> {
         children: [
           Expanded(
             child: TextFields(
+              focusNode: _focusNode,
               hintText: "Type a message",
               controller: messageController,
               obscureText: false,
             ),
           ),
           Container(
-              margin: EdgeInsets.only(right: 25),
-              decoration:
-                  BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+              margin: const EdgeInsets.only(right: 25),
+              decoration: const BoxDecoration(
+                  color: Colors.green, shape: BoxShape.circle),
               child: IconButton(
                   onPressed: sendMessage,
-                  icon: Icon(
+                  icon: const Icon(
                     Icons.send,
                     color: Colors.white,
                   ))),
